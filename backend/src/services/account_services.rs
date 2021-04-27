@@ -40,7 +40,7 @@ pub async fn login_account(
                     return Err(ApiError::Unauthorized(err_message));
                 }
             }
-        }
+        },
     }
 
     Ok(account.into())

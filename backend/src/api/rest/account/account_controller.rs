@@ -5,7 +5,7 @@ use crate::common::errors::ApiError;
 use crate::common::helpers::{respond_json, AppResult};
 use crate::common::validate::validate;
 use crate::database::stores::base_store_trait::BoxedStoreType;
-use crate::dtos::account_dto::{PostAccountResponse, AccountResponse};
+use crate::dtos::account_dto::{AccountResponse, PostAccountResponse};
 use crate::dtos::auth_dto::*;
 use crate::services;
 

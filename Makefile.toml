@@ -25,7 +25,12 @@ command = "cargo"
 args = ["test"]
 dependencies = ["clean"]
 
-[tasks.build-back]
+[tasks.release]
+command = "cargo"
+args = ["release"]
+dependencies = ["format"]
+
+[tasks.build_back]
 command = "cargo"
 args = ["build", "-p", "guardian-backend"]
 dependencies = ["clean"]

@@ -40,7 +40,7 @@ pub async fn create_session(
                     return Err(ApiError::Unauthorized(err_message));
                 }
             }
-        }
+        },
     }
 
     Ok(account.into())

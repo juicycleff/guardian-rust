@@ -5,10 +5,10 @@ use actix_web::{
     HttpResponse,
 };
 use derive_more::Display;
+use futures::task::SpawnError;
 use mongodb::error::Error as MongoError;
 use r2d2::Error as PoolError;
 use uuid::Error as ParseError;
-use futures::task::SpawnError;
 
 #[derive(Debug, Display, PartialEq)]
 #[allow(dead_code)]

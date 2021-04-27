@@ -14,13 +14,13 @@ mod common;
 mod config;
 mod database;
 mod dtos;
+mod events;
 mod features;
 mod routes;
 mod server;
 mod services;
 mod tests;
 mod utils;
-mod events;
 
 #[cfg(feature = "server-actix")]
 use server::actix_server::start_http_server;

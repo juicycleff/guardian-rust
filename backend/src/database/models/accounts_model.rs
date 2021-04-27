@@ -1,17 +1,17 @@
 //! Account model crate
 use chrono::{DateTime, Utc};
 use mongodb::bson::serde_helpers::*;
-use serde::{Deserialize, Serialize, Deserializer, de};
-use std::str::FromStr;
-use std::marker::PhantomData;
-use serde::de::{Visitor, MapAccess};
+use serde::de::{MapAccess, Visitor};
+use serde::{de, Deserialize, Deserializer, Serialize};
 use std::fmt;
-use void::Void;
 use std::fmt::Debug;
+use std::marker::PhantomData;
+use std::str::FromStr;
+use void::Void;
 
 fn string_from_object_id<'de, D>(deserializer: D) -> Result<String, D::Error>
-    where
-        D: Deserializer<'de>,
+where
+    D: Deserializer<'de>,
 {
     let s: bson::oid::ObjectId = Deserialize::deserialize(deserializer)?;
     let id = s.to_hex();
@@ -20,7 +20,11 @@ fn string_from_object_id<'de, D>(deserializer: D) -> Result<String, D::Error>
 
 #[derive(Clone, Debug, Serialize, Deserialize)]
 pub struct AccountModel {
-    #[serde(rename = "_id", serialize_with = "serialize_hex_string_as_object_id", deserialize_with = "string_from_object_id")]
+    #[serde(
+        rename = "_id",
+        serialize_with = "serialize_hex_string_as_object_id",
+        deserialize_with = "string_from_object_id"
+    )]
     pub id: String,
     pub username: Option<String>,
     pub email: Option<String>,

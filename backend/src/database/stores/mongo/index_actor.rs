@@ -1,13 +1,13 @@
-use actix::{Actor, Context};
-use actix::prelude::*;
 use crate::common::helpers::AppResult;
+use actix::prelude::*;
+use actix::{Actor, Context};
 use mongodb::Database;
 
 /// Define message
 #[derive(Message)]
 #[rtype(result = "AppResult<()>")]
 pub struct IndexMongo {
-    pub db: Database
+    pub db: Database,
 }
 
 // Define actor

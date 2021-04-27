@@ -1,6 +1,8 @@
 use crate::common::helpers::AppResult;
 use crate::config::CONFIG;
-use crate::database::stores::mongo::mongo_index_builder::{Indexes, MongoIndex, IndexOption, sync_indexes, CollectionConfig};
+use crate::database::stores::mongo::mongo_index_builder::{
+    sync_indexes, CollectionConfig, IndexOption, Indexes, MongoIndex,
+};
 use mongodb::Database;
 
 pub async fn index_account_collection(db: &Database) -> AppResult<()> {
@@ -30,7 +32,7 @@ pub async fn index_account_collection(db: &Database) -> AppResult<()> {
             indexes: index,
         },
     )
-        .await
+    .await
 }
 
 pub async fn index_onetime_collection(db: &Database) -> AppResult<()> {
@@ -42,8 +44,9 @@ pub async fn index_onetime_collection(db: &Database) -> AppResult<()> {
                 .with_option(IndexOption::Unique),
         )
         .with(
-            MongoIndex::new("expire_at")
-                .with_option(IndexOption::ExpireAfterSeconds(CONFIG.security.onetime_code_duration))
+            MongoIndex::new("expire_at").with_option(IndexOption::ExpireAfterSeconds(
+                CONFIG.security.onetime_code_duration,
+            )),
         );
 
     // println!("Indexing mongo database");
@@ -54,5 +57,5 @@ pub async fn index_onetime_collection(db: &Database) -> AppResult<()> {
             indexes: index,
         },
     )
-        .await
+    .await
 }

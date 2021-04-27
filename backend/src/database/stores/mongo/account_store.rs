@@ -1,31 +1,31 @@
 use std::time::Duration as StdDuration;
 
 use async_trait::async_trait;
-use chrono::{Duration, Utc, SecondsFormat};
-use futures::executor::{block_on};
+use chrono::{Duration, SecondsFormat, Utc};
+use futures::executor::block_on;
 use futures::try_join;
 use mongodb::{
     bson,
     bson::{doc, Document},
-    Client,
-    Collection, Database, options::ClientOptions,
+    options::ClientOptions,
+    Client, Collection, Database,
 };
 
 use crate::common::errors::ApiError;
 use crate::common::helpers::AppResult;
-use crate::config::{CONFIG, DatastoreConfig};
+use crate::config::{DatastoreConfig, CONFIG};
 use crate::database::models::accounts_model::AccountModel;
 use crate::database::models::onetime_code_model::OneTimeCodeModel;
 use crate::database::stores::base_store_trait::{
     BaseStoreTrait, CreateAccountCommand, TableNames, UpdateAccountCommand,
 };
+use crate::database::stores::mongo::index_actor::{IndexActor, IndexMongo};
 use crate::database::stores::mongo::mongo_index_builder::{
-    CollectionConfig, Indexes, IndexOption, MongoIndex, sync_indexes,
+    sync_indexes, CollectionConfig, IndexOption, Indexes, MongoIndex,
 };
 use crate::utils::ver_code_gen::verification_code_gen;
-use std::thread;
-use crate::database::stores::mongo::index_actor::{IndexActor, IndexMongo};
 use actix::Actor;
+use std::thread;
 
 fn get_id_query(id: &str) -> Document {
     let oid = mongodb::bson::oid::ObjectId::with_string(id).unwrap();
@@ -40,11 +40,11 @@ pub struct AccountStore {
 }
 
 impl AccountStore {
-
     async fn _find_one_account(&self, filter: Document) -> AppResult<AccountModel> {
         let account_col = &self._get_collection(TableNames::Accounts);
         let resp = account_col.find_one(filter, None).await?;
-        let serialized_resp = bson::from_document::<AccountModel>(resp.expect("account not found"))?;
+        let serialized_resp =
+            bson::from_document::<AccountModel>(resp.expect("account not found"))?;
         Ok(serialized_resp)
     }
 
@@ -70,7 +70,11 @@ impl BaseStoreTrait for AccountStore {
         let client = Client::with_options(client_options)?;
         let db = client.database(&config.db_name);
 
-        let store = AccountStore { client, config, db: db.clone() };
+        let store = AccountStore {
+            client,
+            config,
+            db: db.clone(),
+        };
         // let _ = block_on(store.clone().index_db());
 
         // Start MyActor in current thread
@@ -236,12 +240,16 @@ impl BaseStoreTrait for AccountStore {
         let doc_rsp = self.onetime_code_find_by_account(account_id, None).await;
 
         // return existing code or skip to create
-        if let Ok(otp) = doc_rsp { return Result::Ok(otp) }
+        if let Ok(otp) = doc_rsp {
+            return Result::Ok(otp);
+        }
 
         // create new otp
         let new_date = Utc::now();
         let expire_at = new_date
-            .checked_add_signed(Duration::seconds(CONFIG.security.onetime_code_duration as i64))
+            .checked_add_signed(Duration::seconds(
+                CONFIG.security.onetime_code_duration as i64,
+            ))
             .unwrap_or_else(Utc::now);
         let now = Utc::now();
         let code = verification_code_gen(CONFIG.security.onetime_code_length);
@@ -266,19 +274,25 @@ impl BaseStoreTrait for AccountStore {
         Ok(otp)
     }
 
-    async fn onetime_code_find_by_account(&self, account_id: &str, code: Option<&str>) -> AppResult<OneTimeCodeModel> {
+    async fn onetime_code_find_by_account(
+        &self,
+        account_id: &str,
+        code: Option<&str>,
+    ) -> AppResult<OneTimeCodeModel> {
         let otp_col = &self._get_collection(TableNames::OneTimeCodes);
 
         let filter = match code {
             Some(c) => doc! { "created_by": account_id, "code": c },
-            None => doc! { "created_by": account_id }
+            None => doc! { "created_by": account_id },
         };
 
         let doc_rsp = otp_col.find_one(filter, None).await?;
 
         match doc_rsp {
-            None => Err(ApiError::DatabaseError("no onetime code for this account".to_string())),
-            Some(docz) => Ok(bson::from_document::<OneTimeCodeModel>(docz)?)
+            None => Err(ApiError::DatabaseError(
+                "no onetime code for this account".to_string(),
+            )),
+            Some(docz) => Ok(bson::from_document::<OneTimeCodeModel>(docz)?),
         }
     }
 }

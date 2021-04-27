@@ -14,7 +14,7 @@ use crate::utils::logger_utils::{build_logger, init_logger};
 
 /// HTTP entry server
 pub async fn start_http_server() -> std::io::Result<()> {
-    // Init env variables
+    // init env variables
     dotenv().ok();
 
     // Setup logger
