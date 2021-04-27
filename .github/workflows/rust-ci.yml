@@ -16,7 +16,16 @@ jobs:
 
     steps:
     - uses: actions/checkout@v2
-    - name: Build
+    - name: Cache Target
+      id: cache-primes
+      uses: actions/cache@v2
+      with:
+        path: |
+          ~/.cargo/registry
+          ~/.cargo/git
+          target
+        key: ${{ runner.os }}-cargo-${{ hashFiles('**/Cargo.lock') }}
+    - name: Setup tools
       run: cargo install cargo-make
     - name: Run tests
       run: cargo make test
