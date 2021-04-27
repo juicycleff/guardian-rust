@@ -1,0 +1,131 @@
+[package]
+name = "guardian-backend"
+version = "0.1.0"
+authors = ["Rex Isaac Raphael <rex.raphael@outlook.com>"]
+edition = "2018"
+documentation = "https://docs.rs/guardian-auth"
+readme = "README.md"
+license = "MIT"
+categories = ["auth", "oauth", "authn"]
+publish = false
+keywords = ["auth", "oauth", "server", "authn"]
+
+# See more keys and their definitions at https://doc.rust-lang.org/cargo/reference/manifest.html
+
+[dependencies]
+#actix and other webs
+actix-web = { version = "=4.0.0-beta.5", features = ["openssl"], optional = true }
+actix-service = { version = "=2.0.0-beta.5", optional = true }
+actix-identity = { version = "0.4.0-beta.1", optional = true }
+actix-cors = { version = "0.6.0-beta.1", optional = true }
+actix-redis = { version = "0.10.0-beta.1", optional = true }
+actix-rt = { version = "2.2.0", optional = true }
+actix-files = { version = "0.6.0-beta.4", optional = true }
+actix = { version = "0.11.1", optional = true }
+sentry-actix = { version = "0.22.0", optional = true }
+
+#security
+argon2rs = "0.2.5"
+jsonwebtoken = "8.0.0-beta.2"
+
+#common crates
+openssl = { version = "0.10.33", features = ["v110"] }
+futures = "0.3.14"
+lazy_static = "1.4.0"
+dotenv = "0.15.0"
+env_logger = "0.8.1"
+chrono = { version = "0.4.19", features = ["serde"] }
+uuid = { version = "0.8.2", features = ["serde", "v4"] }
+rayon = "1.4.1"
+validator = "0.13.0"
+validator_derive = "0.13.0"
+derive_more = "0.99.13"
+zxcvbn = "2.1.1"
+rand = "0.8.3"
+regex = "1"
+pin-project = "1.0.0"
+time = "0.2.26"
+voca_rs = "1.13.0"
+json_dotpath = "1.1.0"
+strum = "0.20"
+strum_macros = "0.20"
+settimeout = "0.1.2"
+void = "1.0.2"
+bson = "1.2.2"
+riker = "0.4.1"
+
+#async
+tokio = { version = "1", features = ["full"] }
+async-std = "1.9.0"
+async-trait = "0.1.50"
+
+#serializers
+serde = { version = "1.0.125", features = ["derive"] }
+serde_json = "1.0.64"
+serde_yaml = "0.8.17"
+
+#log support
+log = "0.4.14"
+sentry = "0.22.0"
+slog = "2.7.0"
+slog-json = "2.3.0"
+slog-async = "2.6.0"
+slog-term = "2.8.0"
+
+#perms
+oso = "0.7.1"
+oso-derive = "0.7.1"
+
+#databases
+r2d2 = "0.8.9"
+redis-async = "0.9.2"
+
+[dependencies.mongodb]
+version = "2.0.0-alpha.1"
+optional = true
+
+[dependencies.tokio-postgres]
+version  = "0.7.1"
+optional = true
+
+[dependencies.postgres]
+version  = "0.19.1"
+optional = true
+
+[dependencies.postgres-openssl]
+version = "0.5.0"
+optional = true
+
+[dependencies.postgres-types]
+version = "0.2.1"
+optional = true
+
+[dependencies.rusqlite]
+version = "0.24.0"
+optional = true
+
+[dependencies.mysql]
+version = "20.1.0"
+optional = true
+
+#clients
+[dependencies.sendgrid]
+version = "0.14.0"
+optional = true
+
+[dev-dependencies]
+test-case = "1.1.0"
+mockall = "0.9.1"
+actix-http-test = "3.0.0-beta.4"
+httptest = "0.15.2"
+fakedata_generator = "0.1.0"
+
+[features]
+cockroach = ["tokio-postgres", "postgres", "postgres-types", "postgres-openssl"]
+mongo = ["mongodb"]
+my-sql = ["mysql"]
+server-actix = ["actix", "actix-web", "actix-service", "actix-identity", "actix-cors", "actix-redis", "actix-rt", "actix-files", "sentry-actix"]
+postgresql = ["tokio-postgres", "postgres", "postgres-types", "postgres-openssl"]
+sqlite = ["rusqlite"]
+sendgrid-email = ["sendgrid"]
+default = ["server-actix", "mongo", "sendgrid-email"]

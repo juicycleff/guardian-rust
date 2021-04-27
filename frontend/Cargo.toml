@@ -1,0 +1,16 @@
+[package]
+name = "guardian-frontend"
+version = "0.1.0"
+authors = ["Rex Isaac Raphael <rex.raphael@outlook.com>"]
+edition = "2018"
+
+# See more keys and their definitions at https://doc.rust-lang.org/cargo/reference/manifest.html
+
+[lib]
+crate-type = ["cdylib", "rlib"]
+
+[dependencies]
+yew = "0.17.4"
+yew-router = "0.14.0"
+wasm-bindgen = "0.2.67"
+yewprint = { git = "https://github.com/cecton/yewprint.git", branch = "main" }

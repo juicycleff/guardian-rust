@@ -1,0 +1,42 @@
+name: guardian
+address: "127.0.0.1:4000"
+ssl_address: "127.0.0.1:4443"
+
+datastore:
+  db_url: "postgres://rex@localhost:5432/gluesync_db"
+  db_name: "guardian"
+  redis_url: "127.0.0.1:6379"
+
+security:
+  auth_salt: "CHANGEME"
+  jwt_expiration: 24
+  jwt_key: "4125442A472D4B614E645267556B58703273357638792F423F4528482B4D6251"
+  server: "127.0.0.1:4000"
+  session_key: "4125442A472D4B614E645267556B58703273357638792F423F4528482B4D6251"
+  session_name: "auth"
+  session_secure: false
+  session_max_age_secs: 4000
+  password_strength: 3
+  onetime_code_duration: 120
+  onetime_code_length: 6
+
+features:
+  auth:
+    enable_signup: true
+    enable_login: true
+    login_require_confirmation: true
+    login_with_signup: true
+    security_level: Simple
+
+logging:
+  sentry:
+    dsn: "https://843971de94ef48aa98cf0e89497c0a55@o439891.ingest.sentry.io/5500481"
+    environment: Staging
+
+integration:
+  sendgrid:
+    api_key: "SG.my.api.key"
+
+files:
+  security_cert: "cert.pem"
+  security_key: "key.pem"

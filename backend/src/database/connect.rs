@@ -1,0 +1,18 @@
+//! Database-related functions
+use actix_web::web;
+
+use crate::common::helpers::AppResult;
+use crate::config::{Config, CONFIG};
+use crate::database::stores::account_store::new_account_store;
+use crate::database::stores::base_store_trait::{BaseStoreTrait, BoxedStoreType};
+
+pub fn init_store(config: Config) -> AppResult<BoxedStoreType> {
+    let store = new_account_store(config.datastore).expect("Failed to create connection pool");
+    let _ = store.index_db(); //.and_then(|_| println!("db indexed successfully"));
+    Result::Ok(Box::from(store))
+}
+
+pub fn add_pool(cfg: &mut web::ServiceConfig) {
+    let boxed_store = init_store(CONFIG.clone()).expect("Failed to create connection pool");
+    cfg.data(boxed_store);
+}

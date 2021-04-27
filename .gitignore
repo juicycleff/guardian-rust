@@ -1,0 +1,6 @@
+.idea
+/target
+/backend/target
+/frontend/target
+
+/frontend/dist/*
