@@ -1,0 +1,67 @@
+[env]
+CARGO_MAKE_EXTEND_WORKSPACE_MAKEFILE = true
+
+[tasks.format]
+install_crate = "rustfmt"
+command = "cargo"
+args = ["fmt", "--", "--emit=files"]
+
+[tasks.clippy]
+install_crate = "clippy"
+command = "cargo"
+args = ["clippy"]
+
+[tasks.clean]
+command = "cargo"
+args = ["clean"]
+
+[tasks.build]
+command = "cargo"
+args = ["build"]
+dependencies = ["clean"]
+
+[tasks.test]
+command = "cargo"
+args = ["test"]
+dependencies = ["clean"]
+
+[tasks.build-back]
+command = "cargo"
+args = ["build", "-p", "guardian-backend"]
+dependencies = ["clean"]
+
+[tasks.build_front]
+command = "cargo"
+args = ["build", "-p", "guardian-frontend"]
+dependencies = ["clean"]
+
+[tasks.test_back]
+command = "cargo"
+args = ["test", "-p", "guardian-frontend"]
+dependencies = ["clean"]
+
+[tasks.test_front]
+command = "cargo"
+args = ["test", "-p", "guardian-frontend"]
+dependencies = ["clean"]
+
+[tasks.back_flow]
+dependencies = [
+    "format",
+    "build_back",
+    "test_back"
+]
+
+[tasks.front_flow]
+dependencies = [
+    "format",
+    "build_front",
+    "test_front"
+]
+
+[tasks.default_flow]
+dependencies = [
+    "format",
+    "build",
+    "test"
+]
