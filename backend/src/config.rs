@@ -7,7 +7,7 @@ use serde::{Deserialize, Serialize};
 use serde_json::Value;
 use voca_rs::chop;
 
-use crate::utils::serde_utils::merge_json_and_yaml;
+use crate::common::utils::serde_utils::merge_json_and_yaml;
 use sentry::types::Dsn;
 use std::borrow::Cow;
 
@@ -74,11 +74,15 @@ pub struct FilesConfig {
 pub struct SecurityConfig {
     #[serde(rename = "auth_salt")]
     pub auth_salt: String,
+    #[serde(default = "Default::default")]
+    pub session_path: String,
     #[serde(rename = "jwt_expiration")]
     pub jwt_expiration: i64,
     #[serde(rename = "jwt_key")]
     pub jwt_key: String,
-    pub server: String,
+
+    pub jwt_issuer: String,
+
     #[serde(rename = "session_key")]
     pub session_key: String,
     #[serde(rename = "session_name")]
@@ -110,8 +114,15 @@ pub struct AuthFeaturesConfig {
 }
 
 #[derive(Default, Debug, Clone, PartialEq, Serialize, Deserialize)]
+pub struct ApiFeaturesConfig {
+    pub enable_graphql: bool,
+}
+
+#[derive(Default, Debug, Clone, PartialEq, Serialize, Deserialize)]
 pub struct FeaturesConfig {
     pub auth: AuthFeaturesConfig,
+    #[serde(default = "Default::default")]
+    pub api: ApiFeaturesConfig,
 }
 
 #[derive(Default, Debug, Clone, PartialEq, Serialize, Deserialize)]
@@ -170,8 +181,14 @@ fn read_env_vars(prefix: &str, split_by: Option<&str>) -> Value {
 }
 
 fn load_config_file(filename: Option<String>) -> Config {
+    #[cfg(not(test))]
     let config_path = env::var("GUARDIAN_CONFIG_PATH")
         .unwrap_or_else(|_| "./backend/config/config.yaml".to_string());
+
+    #[cfg(test)]
+    let config_path =
+        env::var("GUARDIAN_CONFIG_PATH").unwrap_or_else(|_| "./config/config.yaml".to_string());
+
     let mut env_value = read_env_vars("APP_", Some("__"));
 
     let real_path = config_path;

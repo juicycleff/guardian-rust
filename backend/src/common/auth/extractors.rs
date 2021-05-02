@@ -21,8 +21,10 @@ impl FromRequest for AuthUser {
         if let Some(identity) = identity {
             let private_claim: PrivateClaim = decode_jwt(&identity).unwrap();
             return ok(AuthUser {
-                id: private_claim.user_id.to_string(),
+                id: private_claim.sub.to_string(),
                 email: private_claim.email,
+                mobile: private_claim.mobile,
+                username: private_claim.username,
             });
         }
         err(HttpResponse::Unauthorized().into())

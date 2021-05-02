@@ -206,6 +206,8 @@ pub trait BaseStoreTrait {
 
     async fn account_set_last_login(&self, id: &str) -> AppResult<bool>;
 
+    async fn account_delete(&self, id: &str, hard_delete: bool) -> AppResult<bool>;
+
     async fn onetime_code_create(&self, id: &str) -> AppResult<OneTimeCodeModel>;
 
     async fn onetime_code_find_by_account(
@@ -214,4 +216,4 @@ pub trait BaseStoreTrait {
         code: Option<&str>,
     ) -> AppResult<OneTimeCodeModel>;
 }
-pub type BoxedStoreType = Box<dyn BaseStoreTrait + Send>;
+pub type BoxedStoreType = Box<dyn BaseStoreTrait + Send + Sync>;

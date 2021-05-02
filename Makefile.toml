@@ -42,7 +42,7 @@ dependencies = ["clean"]
 
 [tasks.test_back]
 command = "cargo"
-args = ["test", "-p", "guardian-frontend"]
+args = ["test", "-p", "guardian-backend"]
 dependencies = ["clean"]
 
 [tasks.test_front]

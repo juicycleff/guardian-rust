@@ -73,7 +73,6 @@ impl ResponseError for ApiError {
             }
             ApiError::Unauthorized(error) => {
                 HttpResponseBuilder::new(self.status_code()).body::<String>(error.into())
-                // HttpResponse::Unauthorized().json(error.into())
             }
             ApiError::Conflict(message) => {
                 HttpResponseBuilder::new(self.status_code()).body::<String>(message.into())
@@ -161,12 +160,21 @@ impl From<MongoError> for ApiError {
         ApiError::DatabaseError(error.to_string())
     }
 }
+
 /// Convert Mongo Error to ApiErrors
 impl From<mongodb::bson::de::Error> for ApiError {
     fn from(error: mongodb::bson::de::Error) -> ApiError {
         ApiError::DatabaseError(error.to_string())
     }
 }
+
+/// Convert Bson Ser Error to ApiErrors
+impl From<mongodb::bson::ser::Error> for ApiError {
+    fn from(error: mongodb::bson::ser::Error) -> ApiError {
+        ApiError::DatabaseError(error.to_string())
+    }
+}
+
 /// Convert Pool Error to ApiErrors
 impl From<SpawnError> for ApiError {
     fn from(error: SpawnError) -> ApiError {

@@ -1,8 +1,10 @@
 use actix_files::Files;
 use actix_web::web;
 
+use crate::api::graphql::graphql_module::graphql_module;
 use crate::api::rest::account::account_module::accounts_module;
 use crate::api::rest::health::health_controller::get_health;
+use crate::config::CONFIG;
 use crate::features::middleware::auth::Auth as AuthMiddleware;
 
 pub fn routes(cfg: &mut web::ServiceConfig) {
@@ -30,4 +32,13 @@ pub fn routes(cfg: &mut web::ServiceConfig) {
                     .use_last_modified(true),
             ),
         );
+
+    // enable graphql module
+    if CONFIG.features.api.enable_graphql {
+        cfg.service(
+            web::scope("/graphql")
+                //.wrap(AuthMiddleware)
+                .configure(graphql_module),
+        );
+    }
 }

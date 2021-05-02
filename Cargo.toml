@@ -3,4 +3,5 @@
 members = [
     "frontend",
     "backend",
+    "juniper_actix"
 ]

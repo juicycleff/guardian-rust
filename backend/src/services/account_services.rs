@@ -17,6 +17,7 @@ pub async fn login_account(
     let hashed_password = hash(&cmd.password);
     if account.password != hashed_password {
         let err_message = "your email, username or password is incorrect".to_string();
+        println!("error with paswword");
         return Err(ApiError::Unauthorized(err_message));
     }
 
@@ -92,31 +93,33 @@ pub async fn find_account(
 
 #[cfg(test)]
 mod test {
-    use chrono::Utc;
-
-    use crate::common::errors::ApiError;
-    use crate::database::models::accounts_model::UpdateAccount;
-    use crate::tests::helpers::tests::get_pool;
+    use crate::common::tests::helpers::tests::get_store;
+    use crate::dtos::account_dto::AccountResponse;
+    use crate::dtos::auth_dto::*;
 
     use super::*;
+    use std::future::Future;
+    use std::pin::Pin;
 
-    pub fn create_account(username: &str, email: &str, pass: &str) -> Result<Account, ApiError> {
-        let new_account = NewAccount {
-            username: Option::from(username.to_string()),
-            mobile: None,
-            email: email.to_string(),
-            password: pass.to_string(),
-            locked_at: None,
-            confirmation_sent_at: None,
-            confirmation_token: None,
-            locked: Option::from(false),
-        };
-
-        let acct: Account = new_account.into();
-        create(&get_pool(), &acct)
+    pub async fn create_account_test(cmd: PostAccountRequest) -> AppResult<AccountResponse> {
+        create_account(&get_store(), &cmd).await
     }
 
-    fn seed_account() -> Result<Account, ApiError> {
-        create_account("user_a", "user_a@example.com", "password")
+    async fn seed_account_test() {
+        let mut futures: Vec<Pin<Box<dyn Future<Output = AppResult<AccountResponse>>>>> = vec![];
+
+        let test_users: Vec<PostAccountRequest> = vec![PostAccountRequest {
+            email: Some("user_a@example.com".to_string()),
+            password: "password".to_string(),
+            confirm_password: "".to_string(),
+            username: Some("user_a".parse().unwrap()),
+            mobile: None,
+        }];
+
+        for ts in test_users.iter() {
+            futures.push(Box::pin(create_account_test(ts.clone())));
+        }
+
+        let _ = futures::future::join_all(futures).await;
     }
 }

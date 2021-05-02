@@ -78,6 +78,10 @@ impl BaseStoreTrait for AccountStore {
         todo!()
     }
 
+    async fn account_delete(&self, id: &str, hard_delete: bool) -> AppResult<bool> {
+        todo!()
+    }
+
     async fn onetime_code_create(&self, id: &str) -> AppResult<OneTimeCodeModel> {
         todo!()
     }

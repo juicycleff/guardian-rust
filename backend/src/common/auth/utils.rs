@@ -1,25 +1,39 @@
 use crate::common::errors::ApiError;
 use crate::config::CONFIG;
-use actix_identity::{CookieIdentityPolicy, IdentityService};
 use argon2rs::argon2i_simple;
 use chrono::{Duration as ChronDur, Utc};
 use jsonwebtoken::{decode, encode, DecodingKey, EncodingKey, Header, Validation};
-use time::Duration;
-use uuid::Uuid;
 
 #[derive(Clone, Debug, Serialize, Deserialize, PartialEq)]
 pub struct PrivateClaim {
-    pub user_id: Uuid,
-    pub email: String,
+    pub sub: String,
+    pub email: Option<String>,
+    pub username: Option<String>,
+    pub mobile: Option<String>,
     exp: i64,
+    aud: String,
+    iat: i64,
+    iss: String,
+    jti: uuid::Uuid,
 }
 
 impl PrivateClaim {
-    pub fn new(user_id: Uuid, email: String) -> Self {
+    pub fn new(
+        user_id: String,
+        email: Option<String>,
+        username: Option<String>,
+        mobile: Option<String>,
+    ) -> Self {
         Self {
-            user_id,
+            sub: user_id,
             email,
+            username,
+            mobile,
             exp: (Utc::now() + ChronDur::hours(CONFIG.security.jwt_expiration)).timestamp(),
+            aud: "".to_string(),
+            iat: Utc::now().timestamp(),
+            iss: CONFIG.security.jwt_issuer.to_string(),
+            jti: uuid::Uuid::new_v4(),
         }
     }
 }
@@ -50,26 +64,15 @@ pub fn hash(password: &str) -> String {
         .collect()
 }
 
-/// Gets the identidy service for injection into an Actix app
-pub fn get_identity_service() -> IdentityService<CookieIdentityPolicy> {
-    IdentityService::new(
-        CookieIdentityPolicy::new(&CONFIG.security.session_key.as_ref())
-            .name(&CONFIG.security.session_name)
-            .max_age(Duration::seconds(CONFIG.security.session_timeout))
-            .secure(CONFIG.security.session_secure),
-    )
-}
-
 #[cfg(test)]
 pub mod tests {
     use super::*;
-    static EMAIL: &str = "test@test.com";
 
     #[test]
     fn it_hashes_a_password() {
         let password = "password";
         let hashed = hash(password);
-        assert_ne!(password, hashed);
+        assert_ne!(password, hashed.as_str());
     }
 
     #[test]
@@ -82,14 +85,16 @@ pub mod tests {
 
     #[test]
     fn it_creates_a_jwt() {
-        let private_claim = PrivateClaim::new(Uuid::new_v4(), EMAIL.into());
+        let email = Option::from("test@test.com".to_string());
+        let private_claim = PrivateClaim::new("1234".parse().unwrap(), email, None, None);
         let jwt = create_jwt(private_claim);
         assert!(jwt.is_ok());
     }
 
     #[test]
     fn it_decodes_a_jwt() {
-        let private_claim = PrivateClaim::new(Uuid::new_v4(), EMAIL.into());
+        let email = Option::from("test@test.com".to_string());
+        let private_claim = PrivateClaim::new("3467".parse().unwrap(), email, None, None);
         let jwt = create_jwt(private_claim.clone()).unwrap();
         let decoded = decode_jwt(&jwt).unwrap();
         assert_eq!(private_claim, decoded);

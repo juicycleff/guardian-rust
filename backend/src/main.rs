@@ -5,9 +5,10 @@ extern crate lazy_static;
 extern crate serde;
 extern crate serde_json;
 #[macro_use]
-extern crate validator_derive;
-#[macro_use]
 extern crate redis_async;
+
+#[cfg(feature = "server-actix")]
+use server::actix_server::start_http_server;
 
 mod api;
 mod common;
@@ -19,13 +20,8 @@ mod features;
 mod routes;
 mod server;
 mod services;
-mod tests;
-mod utils;
 
-#[cfg(feature = "server-actix")]
-use server::actix_server::start_http_server;
-
-#[actix_rt::main]
+#[actix_web::main]
 async fn main() -> std::io::Result<()> {
     start_http_server().await
 }

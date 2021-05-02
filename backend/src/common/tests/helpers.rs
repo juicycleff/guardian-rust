@@ -4,17 +4,16 @@ pub mod tests {
     use crate::database::stores::base_store_trait::BoxedStoreType;
     use crate::features::appstate::state::{new_state, AppState};
     use actix_web::web::Data;
-    use futures::executor::block_on;
 
     /// Returns a r2d2 Pooled Connection to be used in tests
-    pub fn get_pool() -> BoxedStoreType {
-        init_store(CONFIG.clone()).unwrap()
+    pub fn get_store() -> BoxedStoreType {
+        init_store(CONFIG.clone()).expect("could not get store for test")
     }
 
     #[cfg(feature = "server-actix")]
     /// Returns a r2d2 Pooled Connection wrapped in Actix Application Data
-    pub fn get_data_pool() -> Data<BoxedStoreType> {
-        Data::new(get_pool())
+    pub fn get_data_store() -> Data<BoxedStoreType> {
+        Data::new(get_store())
     }
 
     // Mock application state

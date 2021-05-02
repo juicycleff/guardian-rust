@@ -56,3 +56,22 @@ pub fn build_logger(root_logger: &slog::Logger) -> StructuredLogger {
     )
     .exclude("/liveness")
 }
+
+fn init_app_logger() -> Logger<Arc<dyn SendSyncRefUnwindSafeDrain<Ok = (), Err = Never>>> {
+    let decorator = slog_term::TermDecorator::new().build();
+    let drain = slog_term::FullFormat::new(decorator)
+        .use_original_order()
+        .build()
+        .fuse();
+    let drain = slog_async::Async::new(drain).build().fuse();
+
+    let drain = slog_async::Async::new(drain).build().fuse();
+
+    slog::Logger::root(drain, o!("version" => env!("CARGO_PKG_VERSION")))
+}
+
+// Throw the Config struct into a CONFIG lazy_static to avoid multiple processing
+lazy_static! {
+    pub static ref LOGGER: Logger<Arc<dyn SendSyncRefUnwindSafeDrain<Ok = (), Err = Never>>> =
+        init_app_logger();
+}

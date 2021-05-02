@@ -11,16 +11,21 @@ security:
   auth_salt: "CHANGEME"
   jwt_expiration: 24
   jwt_key: "4125442A472D4B614E645267556B58703273357638792F423F4528482B4D6251"
-  server: "127.0.0.1:4000"
+  jwt_issuer: "guardian"
   session_key: "4125442A472D4B614E645267556B58703273357638792F423F4528482B4D6251"
   session_name: "auth"
   session_secure: false
   session_max_age_secs: 4000
+  session_path: "/"
+
   password_strength: 3
+
   onetime_code_duration: 120
   onetime_code_length: 6
 
 features:
+  api:
+    enabled_graphql: true
   auth:
     enable_signup: true
     enable_login: true

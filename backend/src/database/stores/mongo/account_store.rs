@@ -3,33 +3,30 @@ use std::time::Duration as StdDuration;
 use async_trait::async_trait;
 use chrono::{Duration, SecondsFormat, Utc};
 use futures::executor::block_on;
-use futures::try_join;
 use mongodb::{
     bson,
     bson::{doc, Document},
     options::ClientOptions,
     Client, Collection, Database,
 };
+use riker::actors::{ActorRefFactory, Timer};
 
 use crate::common::errors::ApiError;
 use crate::common::helpers::AppResult;
+use crate::common::utils::ver_code_gen::verification_code_gen;
 use crate::config::{DatastoreConfig, CONFIG};
 use crate::database::models::accounts_model::AccountModel;
 use crate::database::models::onetime_code_model::OneTimeCodeModel;
 use crate::database::stores::base_store_trait::{
     BaseStoreTrait, CreateAccountCommand, TableNames, UpdateAccountCommand,
 };
-use crate::database::stores::mongo::index_actor::{IndexActor, IndexMongo};
-use crate::database::stores::mongo::mongo_index_builder::{
-    sync_indexes, CollectionConfig, IndexOption, Indexes, MongoIndex,
-};
-use crate::utils::ver_code_gen::verification_code_gen;
-use actix::Actor;
-use std::thread;
+use crate::database::stores::mongo::index_actor;
+use crate::database::stores::mongo::index_actor::IndexMongoActor;
+use crate::events::SYSTEM;
 
 fn get_id_query(id: &str) -> Document {
     let oid = mongodb::bson::oid::ObjectId::with_string(id).unwrap();
-    doc! { "_id": oid }
+    doc! { "_id": oid, "delete_flag": false }
 }
 
 #[derive(Clone)]
@@ -43,9 +40,14 @@ impl AccountStore {
     async fn _find_one_account(&self, filter: Document) -> AppResult<AccountModel> {
         let account_col = &self._get_collection(TableNames::Accounts);
         let resp = account_col.find_one(filter, None).await?;
-        let serialized_resp =
-            bson::from_document::<AccountModel>(resp.expect("account not found"))?;
-        Ok(serialized_resp)
+
+        match resp {
+            None => Err(ApiError::NotFound("account not found".to_string())),
+            Some(d) => {
+                let serialized_resp = bson::from_document::<AccountModel>(d)?;
+                Ok(serialized_resp)
+            }
+        }
     }
 
     async fn _update_one_account(&self, query: Document, payload: Document) -> AppResult<bool> {
@@ -75,11 +77,15 @@ impl BaseStoreTrait for AccountStore {
             config,
             db: db.clone(),
         };
-        // let _ = block_on(store.clone().index_db());
 
-        // Start MyActor in current thread
-        let addr = IndexActor.start();
-        let _ = addr.do_send(IndexMongo { db: db.clone() });
+        let index_actor_rsp = SYSTEM.actor_of::<IndexMongoActor>("my-actor");
+        match index_actor_rsp {
+            Ok(x_actor) => {
+                let delay = StdDuration::from_secs(1);
+                SYSTEM.schedule_once(delay, x_actor, None, db);
+            }
+            Err(_) => {}
+        }
 
         Result::Ok(store)
     }
@@ -89,15 +95,27 @@ impl BaseStoreTrait for AccountStore {
     }
 
     async fn index_db(&self) -> AppResult<()> {
-        todo!()
+        index_actor::index_db(&self.db).await
     }
 
     async fn account_create(&self, cmd: CreateAccountCommand) -> AppResult<AccountModel> {
         let account_col = &self._get_collection(TableNames::Accounts);
 
-        let email = &cmd.email.unwrap_or_default();
-        let username = &cmd.username.unwrap_or_default();
-        let mobile = &cmd.mobile.unwrap_or_default();
+        let email = match cmd.email {
+            None => bson::Bson::Null,
+            Some(s) => bson::Bson::String(s),
+        };
+
+        let username = match cmd.username {
+            None => bson::Bson::Null,
+            Some(s) => bson::Bson::String(s),
+        };
+
+        let mobile = match cmd.mobile {
+            None => bson::Bson::Null,
+            Some(s) => bson::Bson::String(s),
+        };
+
         let now = Utc::now().to_rfc3339_opts(SecondsFormat::Millis, true);
 
         let doc_data = doc! {
@@ -114,13 +132,40 @@ impl BaseStoreTrait for AccountStore {
             "enable_2fa": false,
         };
 
-        let resp = account_col.insert_one(doc_data, None).await?;
-        let id = bson::from_bson::<bson::oid::ObjectId>(resp.inserted_id)?;
-        self.account_find_by_id(&id.to_hex()).await
+        let result = account_col.insert_one(doc_data, None).await;
+
+        match result {
+            Ok(resp) => {
+                let id = bson::from_bson::<bson::oid::ObjectId>(resp.inserted_id)?;
+                self.account_find_by_id(&id.to_hex()).await
+            }
+            Err(_err) => Err(ApiError::Conflict(
+                "account with identity not available".to_string(),
+            )),
+        }
     }
 
     async fn account_update(&self, id: &str, cmd: UpdateAccountCommand) -> AppResult<AccountModel> {
-        todo!()
+        let query = get_id_query(&id);
+
+        let payload = mongodb::bson::to_bson::<UpdateAccountCommand>(&cmd)?;
+        let update_payload = doc! {
+            "$set": payload,
+            "$currentDate": { "updated_at": true }
+        };
+
+        // update record
+        let updated = self
+            ._update_one_account(query.clone(), update_payload)
+            .await?;
+
+        if !updated {
+            let err = "could not updated account".to_string();
+            Err(ApiError::DatabaseError(err))
+        } else {
+            // return updated record
+            self._find_one_account(query).await
+        }
     }
     async fn account_find_by_id(&self, id: &str) -> AppResult<AccountModel> {
         let filter = get_id_query(&id);
@@ -128,17 +173,17 @@ impl BaseStoreTrait for AccountStore {
     }
 
     async fn account_find_by_username(&self, username: &str) -> AppResult<AccountModel> {
-        let filter = doc! { "username": username };
+        let filter = doc! { "username": username, "delete_flag": false };
         self._find_one_account(filter).await
     }
 
     async fn account_find_by_email(&self, email: &str) -> AppResult<AccountModel> {
-        let filter = doc! { "email": email };
+        let filter = doc! { "email": email, "delete_flag": false };
         self._find_one_account(filter).await
     }
 
     async fn account_find_by_mobile(&self, mobile: &str) -> AppResult<AccountModel> {
-        let filter = doc! { "mobile": mobile };
+        let filter = doc! { "mobile": mobile, "delete_flag": false };
         self._find_one_account(filter).await
     }
 
@@ -233,6 +278,30 @@ impl BaseStoreTrait for AccountStore {
         self._update_one_account(query, update_payload).await
     }
 
+    async fn account_delete(&self, id: &str, hard_delete: bool) -> AppResult<bool> {
+        let resp = self.account_find_by_id(&id).await;
+
+        if resp.is_err() {
+            return Err(ApiError::NotFound(
+                "account by id does not exist".to_string(),
+            ));
+        }
+
+        if hard_delete {
+            let account_col = &self._get_collection(TableNames::Accounts);
+            let query = get_id_query(&id);
+            let _ = account_col.delete_one(query, None).await?;
+        }
+
+        let query = get_id_query(&id);
+        let update_payload = doc! { "$set": [
+            {
+                "delete_flag": true,
+            },
+        ]};
+        self._update_one_account(query, update_payload).await
+    }
+
     async fn onetime_code_create(&self, account_id: &str) -> AppResult<OneTimeCodeModel> {
         let otp_col = &self._get_collection(TableNames::OneTimeCodes);
 
@@ -300,33 +369,178 @@ impl BaseStoreTrait for AccountStore {
 #[cfg(test)]
 mod tests {
     use super::*;
+    use crate::config::DatastoreConfig;
+    use crate::database::stores::base_store_trait::TableNames;
 
     async fn get_db() -> AccountStore {
         let cfg = DatastoreConfig {
             db_url: "mongodb://localhost:27017".to_string(),
             db_name: "guardian_test".to_string(),
-            redis_url: "".to_string(),
+            redis_url: "localhost:6379".to_string(),
         };
 
-        let store = AccountStore::connect(cfg).unwrap();
-        store.index_db().await;
+        let store_res = AccountStore::connect(cfg);
+        assert_eq!(store_res.is_err(), false);
+
+        let store = store_res.unwrap();
+
+        // create collections
+        let _ = store
+            .db
+            .create_collection(TableNames::Accounts.to_string().as_str(), None)
+            .await;
+        let _ = store
+            .db
+            .create_collection(TableNames::OneTimeCodes.to_string().as_str(), None)
+            .await;
+
+        // index db
+        let _ = store.index_db().await;
+
         store
+    }
+
+    async fn seed_db(store: &AccountStore) -> AppResult<AccountModel> {
+        store
+            .account_create(CreateAccountCommand {
+                password: "password".to_string(),
+                email: Some("test@test.com".to_string()),
+                username: Some("test".to_string()),
+                mobile: Some("35674677".to_string()),
+            })
+            .await
+    }
+
+    async fn remove_doc(store: &AccountStore, id: String) {
+        let _ = store.account_delete(id.as_str(), false).await.unwrap();
     }
 
     #[actix_rt::test]
     async fn it_can_create_account() {
         let store = get_db().await;
-
         let acct = store
             .account_create(CreateAccountCommand {
-                password: "my-password".to_string(),
-                email: Some("example@example.com".to_string()),
-                username: Some("example".to_string()),
+                password: "password".to_string(),
+                email: Some("test@test.com".to_string()),
+                username: Some("test".to_string()),
                 mobile: Some("35674677".to_string()),
             })
             .await
             .unwrap();
 
-        assert_eq!(acct.username.unwrap(), "example@example.coms".to_string());
+        assert_eq!(acct.username.unwrap(), "test".to_string());
+        remove_doc(&store, acct.id).await;
+    }
+
+    #[actix_rt::test]
+    async fn it_can_create_account_with_only_username() {
+        let store = get_db().await;
+
+        let first_acct = store
+            .account_create(CreateAccountCommand {
+                password: "password".to_string(),
+                email: None,
+                username: Some("tester".to_string()),
+                mobile: None,
+            })
+            .await
+            .unwrap();
+        assert_eq!(first_acct.username.unwrap(), "tester".to_string());
+
+        let second_acct = store
+            .account_create(CreateAccountCommand {
+                password: "password".to_string(),
+                email: None,
+                username: Some("test2".to_string()),
+                mobile: None,
+            })
+            .await
+            .unwrap();
+        assert_eq!(second_acct.username.unwrap(), "test2".to_string());
+
+        remove_doc(&store, first_acct.id).await;
+        remove_doc(&store, second_acct.id).await;
+    }
+
+    #[actix_rt::test]
+    async fn it_cannot_create_account() {
+        let store = get_db().await;
+
+        // create first account
+        let acct = store
+            .account_create(CreateAccountCommand {
+                password: "password".to_string(),
+                email: Some("test9@test.com".to_string()),
+                username: Some("test9".to_string()),
+                mobile: Some("35674679".to_string()),
+            })
+            .await
+            .unwrap();
+
+        let result = store
+            .account_create(CreateAccountCommand {
+                password: "password".to_string(),
+                email: Some("test9@test.com".to_string()),
+                username: Some("test9".to_string()),
+                mobile: Some("35674679".to_string()),
+            })
+            .await
+            .unwrap_err();
+        let expect = ApiError::Conflict("account with identity not available".to_string());
+        assert_eq!(result, expect);
+
+        remove_doc(&store, acct.id).await;
+    }
+
+    #[actix_rt::test]
+    async fn it_can_soft_delete_account() {
+        let store = get_db().await;
+
+        // create first account
+        let acct = store
+            .account_create(CreateAccountCommand {
+                password: "password".to_string(),
+                email: None,
+                username: Some("delete_user".to_string()),
+                mobile: None,
+            })
+            .await
+            .unwrap();
+        let del_rsp = store.account_delete(acct.id.as_str(), false).await;
+        assert_eq!(del_rsp.is_err(), false);
+
+        let result = store
+            .account_find_by_id(acct.id.as_str())
+            .await
+            .unwrap_err();
+        let expect = ApiError::NotFound("account not found".to_string());
+        assert_eq!(result, expect);
+
+        remove_doc(&store, acct.id).await;
+    }
+
+    #[actix_rt::test]
+    async fn it_can_hard_delete_account() {
+        let store = get_db().await;
+
+        // create first account
+        let acct = store
+            .account_create(CreateAccountCommand {
+                password: "password".to_string(),
+                email: None,
+                username: Some("delete_user2".to_string()),
+                mobile: None,
+            })
+            .await
+            .unwrap();
+        let del_rsp = store.account_delete(acct.id.as_str(), true).await;
+        assert_eq!(del_rsp.is_err(), false);
+
+        let result = store
+            .account_find_by_id(acct.id.as_str())
+            .await
+            .unwrap_err();
+        let expect = ApiError::NotFound("account not found".to_string());
+        assert_eq!(result, expect);
     }
 }

@@ -103,6 +103,7 @@ impl MongoIndex {
         });
     }
 
+    #[allow(unused)]
     /// Builder style method for `add_key_with_direction`.
     pub fn with_key_with_direction(
         mut self,
@@ -221,11 +222,13 @@ pub enum IndexOption {
     Background,
     /// Creates a unique index
     Unique,
+    #[allow(unused)]
     /// Name of the index
     Name(String),
     #[allow(unused)]
     /// Only references documents that match the filter expression
     PartialFilterExpression(Document),
+    #[allow(unused)]
     /// Only references documents with the specified field
     Sparse,
     /// TTL to control how long data is retained in the collectino

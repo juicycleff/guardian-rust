@@ -1,6 +1,6 @@
-// use validator::{Validate};
 use lazy_static::lazy_static;
 use regex::Regex;
+use validator::Validate;
 
 lazy_static! {
     static ref EMAIL_REGEX: Regex = Regex::new(r"^[^@\s]+@[^@\s]+\.[^@\s]+$").unwrap();
@@ -8,7 +8,7 @@ lazy_static! {
         Regex::new(r"^[+]*[(]{0,1}[0-9]{1,4}[)]{0,1}[-\s\./0-9]*$").unwrap();
 }
 
-#[derive(Clone, Deserialize, Serialize, Validate, Debug)]
+#[derive(juniper::GraphQLInputObject, Clone, Deserialize, Serialize, Validate, Debug)]
 pub struct MobileInput {
     #[validate(
         length(min = 1, message = "mobile prefix too short"),
@@ -20,7 +20,7 @@ pub struct MobileInput {
     pub digit: String,
 }
 
-#[derive(Clone, Deserialize, Serialize, Validate, Debug)]
+#[derive(juniper::GraphQLInputObject, Clone, Deserialize, Serialize, Validate, Debug)]
 pub struct PostSessionRequest {
     #[validate(length(
         min = 2,
@@ -30,12 +30,12 @@ pub struct PostSessionRequest {
 
     #[validate(
         length(min = 1),
-        custom = "crate::utils::validators::validate_strong_password"
+        custom = "crate::common::utils::validators::validate_strong_password"
     )]
     pub password: String,
 }
 
-#[derive(Clone, Debug, Deserialize, Serialize, Validate)]
+#[derive(juniper::GraphQLInputObject, Clone, Debug, Deserialize, Serialize, Validate)]
 pub struct PostAccountRequest {
     #[validate(
         email,
@@ -46,7 +46,7 @@ pub struct PostAccountRequest {
 
     #[validate(
         length(min = 1),
-        custom = "crate::utils::validators::validate_strong_password"
+        custom = "crate::common::utils::validators::validate_strong_password"
     )]
     pub password: String,
 

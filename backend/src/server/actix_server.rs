@@ -5,12 +5,13 @@ use dotenv::dotenv;
 use openssl::ssl::{SslAcceptor, SslFiletype, SslMethod};
 
 use crate::common::cache::redis::add_cache;
+use crate::common::utils::cookie_utils::get_cookie_policy;
+use crate::common::utils::logger_utils::{build_logger, init_logger};
 use crate::config::CONFIG;
-use crate::database::connect::add_pool;
+use crate::database::connect::{add_pool, add_shared_state};
 use crate::features::appstate::state::new_state;
 use crate::routes::routes;
-use crate::utils::cookie_utils::get_cookie_policy;
-use crate::utils::logger_utils::{build_logger, init_logger};
+use actix_web::http::header;
 
 /// HTTP entry server
 pub async fn start_http_server() -> std::io::Result<()> {
@@ -18,7 +19,7 @@ pub async fn start_http_server() -> std::io::Result<()> {
     dotenv().ok();
 
     // Setup logger
-    env_logger::init();
+    env_logger::init_from_env(env_logger::Env::new().default_filter_or("info"));
 
     // Initialize sentry
     let _guard = sentry::init(sentry::ClientOptions {
@@ -44,15 +45,27 @@ pub async fn start_http_server() -> std::io::Result<()> {
     // initialize actix server
     let server = HttpServer::new(move || {
         App::new()
+            .app_data(data.clone())
             .wrap(build_logger(&root_logger))
             .wrap(middleware::Compress::default())
-            .wrap(Cors::default().supports_credentials())
+            .wrap(middleware::Logger::default())
+            .wrap(
+                Cors::default()
+                    .supports_credentials()
+                    .allowed_origin(&CONFIG.address)
+                    .allowed_origin(&CONFIG.ssl_address)
+                    .allowed_origin_fn(|origin, _req_head| {
+                        origin.as_bytes().starts_with(b"http://localhost")
+                    })
+                    .allowed_headers(&[header::AUTHORIZATION, header::ACCEPT])
+                    .allowed_header(header::CONTENT_TYPE)
+                    .expose_headers(&[header::CONTENT_DISPOSITION]),
+            )
             .wrap(IdentityService::new(get_cookie_policy()))
             .configure(add_cache)
+            .app_data(add_shared_state)
             .configure(add_pool)
             .configure(routes)
-            .app_data(data.clone())
-            .wrap(middleware::Logger::default())
     })
     .bind_openssl(&CONFIG.ssl_address, builder)?
     .bind(&CONFIG.address)?

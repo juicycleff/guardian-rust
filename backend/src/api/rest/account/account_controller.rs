@@ -1,6 +1,7 @@
 use actix_identity::Identity;
 use actix_web::web::{Data, Json};
 
+use crate::common::auth::utils::{create_jwt, PrivateClaim};
 use crate::common::errors::ApiError;
 use crate::common::helpers::{respond_json, AppResult};
 use crate::common::validate::validate;
@@ -19,10 +20,14 @@ pub async fn post_session(
 
     let cmd: PostSessionRequest = body.into_inner();
     let acct = services::account_services::login_account(&store, &cmd).await?;
-    id.remember(acct.id);
+    id.remember(acct.id.clone());
+
+    // create jwt token
+    let pc = PrivateClaim::new(acct.id, acct.email, acct.username, acct.mobile);
+    let token = create_jwt(pc)?;
 
     respond_json(PostAccountResponse {
-        id_token: id.identity(),
+        id_token: Some(token),
     })
 }
 
@@ -34,18 +39,26 @@ pub async fn post_account(
     validate(&body)?;
 
     let cmd: PostAccountRequest = body.into_inner();
-    let _ = services::account_services::create_account(&store, &cmd).await?;
+    let acct = services::account_services::create_account(&store, &cmd).await?;
 
-    respond_json(PostAccountResponse { id_token: None })
+    // create jwt token
+    let pc = PrivateClaim::new(acct.id, acct.email, acct.username, acct.mobile);
+    let token = create_jwt(pc).unwrap_or_default();
+
+    respond_json(PostAccountResponse {
+        id_token: Some(token),
+    })
 }
 
 /// This handler checks if an account is available or not.
 pub async fn get_available_account(
+    id: Identity,
     store: Data<BoxedStoreType>,
     body: Json<IdentifierRequest>,
 ) -> AppResult<Json<AccountResponse>> {
     validate(&body)?;
 
+    println!("Helllo {}", id.identity().unwrap_or_default());
     let cmd: IdentifierRequest = body.into_inner();
     let acct = services::account_services::find_account(&store, &cmd).await;
 
@@ -54,7 +67,7 @@ pub async fn get_available_account(
         Err(_) => respond_json(false),
     } */
 
-    respond_json(acct.unwrap())
+    respond_json(acct?)
 }
 
 #[cfg(test)]

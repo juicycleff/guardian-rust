@@ -1,9 +1,9 @@
 use crate::common::errors::ApiError;
 use crate::config::CONFIG;
 use actix::prelude::*;
-use actix_redis::RedisActor;
+use actix_redis::{Command, RedisActor};
 use actix_web::web::{Data, ServiceConfig};
-use redis_async::resp::RespValue;
+use redis_async::resp::{FromResp, RespValue};
 
 pub type Cache = Data<Addr<RedisActor>>;
 
@@ -32,12 +32,12 @@ pub async fn delete<'a>(redis: Cache, key: &'a str) -> Result<String, ApiError> 
 async fn send<'a>(redis: Cache, command: RespValue) -> Result<String, ApiError> {
     let error_message = format!("Could not send {:?} command to Redis", command);
     let error = ApiError::CacheError(error_message);
-    /* let response = redis.send(Command(command)).await.map_err(|_| error)?;
+    let response = redis.send(Command(command)).await.map_err(|_| error)?;
     match response {
         Ok(message) => Ok::<String, _>(FromResp::from_resp(message).unwrap_or("".into())),
         Err(message) => Err(ApiError::CacheError(format!("{:?}", message))),
-    } */
-    Result::Ok("Nothing".parse().unwrap())
+    }
+    // Result::Ok("Nothing".parse().unwrap())
 }
 
 /// Add the redis actor to actix data if the URL is set
