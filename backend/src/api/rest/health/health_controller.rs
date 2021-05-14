@@ -1,6 +1,6 @@
 use crate::common::errors::ApiError;
 use crate::common::helpers::respond_json;
-use crate::database::models::health_model::HealthResponse;
+use crate::data::models::health_model::HealthResponse;
 use actix_web::web::Json;
 
 /// Handler to get the liveness of the service

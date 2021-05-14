@@ -32,22 +32,22 @@ dependencies = ["format"]
 
 [tasks.build_back]
 command = "cargo"
-args = ["build", "-p", "guardian-backend"]
+args = ["build", "-p", "guardian_backend"]
 dependencies = ["clean"]
 
 [tasks.build_front]
 command = "cargo"
-args = ["build", "-p", "guardian-frontend"]
+args = ["build", "-p", "guardian_frontend"]
 dependencies = ["clean"]
 
 [tasks.test_back]
 command = "cargo"
-args = ["test", "-p", "guardian-backend"]
+args = ["test", "-p", "guardian_backend", "--", "--test-threads=1"]
 dependencies = ["clean"]
 
 [tasks.test_front]
 command = "cargo"
-args = ["test", "-p", "guardian-frontend"]
+args = ["test", "-p", "guardian_frontend"]
 dependencies = ["clean"]
 
 [tasks.back_flow]

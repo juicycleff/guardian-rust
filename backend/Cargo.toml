@@ -1,5 +1,5 @@
 [package]
-name = "guardian-backend"
+name = "guardian_backend"
 version = "0.1.0"
 authors = ["Rex Isaac Raphael <rex.raphael@outlook.com>"]
 edition = "2018"
@@ -12,26 +12,48 @@ keywords = ["auth", "oauth", "server", "authn"]
 
 # See more keys and their definitions at https://doc.rust-lang.org/cargo/reference/manifest.html
 
+[features]
+cockroach = ["tokio-postgres", "postgres", "postgres-types", "postgres-openssl"]
+mongo = ["mongodb"]
+my-sql = ["mysql"]
+server-actix = ["actix", "actix-web", "actix-session", "actix-service", "actix-cors", "actix-protobuf", "actix-redis", "actix-rt", "actix-files", "sentry-actix"]
+postgresql = ["tokio-postgres", "postgres", "postgres-types", "postgres-openssl"]
+sqlite = ["rusqlite"]
+sendgrid_integration = ["sendgrid"]
+default = ["server-actix", "mongo", "sendgrid_integration"]
+
+[build-dependencies]
+prost-build = "0.7"
+
 [dependencies]
 #actix and other webs
 actix-web = { version = "=4.0.0-beta.5", features = ["openssl"], optional = true }
 actix-service = { version = "=2.0.0-beta.5", optional = true }
-actix-identity = { version = "0.4.0-beta.1", optional = true }
 actix-cors = { version = "0.6.0-beta.1", optional = true }
 actix-redis = { version = "0.10.0-beta.1", optional = true }
 actix-rt = { version = "2.2.0", optional = true }
 actix-files = { version = "0.6.0-beta.4", optional = true }
 actix = { version = "0.11.1", optional = true }
 sentry-actix = { version = "0.22.0", optional = true }
+actix-session = { version = "0.5.0-beta.1", optional = true }
+
+paperclip = { version = "0.5", features = ["actix3"] }
+
+actix-protobuf = { version = "0.6.0", optional = true }
+prost = "0.7"
+prost-derive = "0.7"
 
 #juniper graphql
 juniper = "0.15.4"
 juniper_actix = { version = "0.2.4", path = "../juniper_actix", features = ["subscriptions"] }
 juniper_graphql_ws = "0.2.4"
 
+actix_guardian_identity = { path = "../actix-guardian-identity" }
+
 #security
 argon2rs = "0.2.5"
 jsonwebtoken = "8.0.0-beta.2"
+slauth = "0.5.0"
 
 #common crates
 openssl = { version = "0.10.33", features = ["v110"] }
@@ -42,7 +64,6 @@ chrono = { version = "0.4.19", features = ["serde"] }
 uuid = { version = "0.8.2", features = ["serde", "v4"] }
 rayon = "1.4.1"
 validator = { version = "0.12", features = ["derive"] }
-# validator_derive = "0.13.0"
 derive_more = "0.99.13"
 zxcvbn = "2.1.1"
 rand = "0.8.3"
@@ -57,9 +78,11 @@ settimeout = "0.1.2"
 void = "1.0.2"
 bson = "1.2.2"
 riker = "0.4.1"
+celery = { git = "https://github.com/rusty-celery/rusty-celery.git" }
+once_cell = "1.7.2"
 
 #async
-tokio = { version = "1", features = ["full"] }
+tokio = { version = "1.0.0", features = ["full"] }
 async-std = "1.9.0"
 async-trait = "0.1.50"
 
@@ -124,13 +147,3 @@ mockall = "0.9.1"
 actix-http-test = "3.0.0-beta.4"
 httptest = "0.15.2"
 fakedata_generator = "0.1.0"
-
-[features]
-cockroach = ["tokio-postgres", "postgres", "postgres-types", "postgres-openssl"]
-mongo = ["mongodb"]
-my-sql = ["mysql"]
-server-actix = ["actix", "actix-web", "actix-service", "actix-identity", "actix-cors", "actix-redis", "actix-rt", "actix-files", "sentry-actix"]
-postgresql = ["tokio-postgres", "postgres", "postgres-types", "postgres-openssl"]
-sqlite = ["rusqlite"]
-sendgrid-email = ["sendgrid"]
-default = ["server-actix", "mongo", "sendgrid-email"]

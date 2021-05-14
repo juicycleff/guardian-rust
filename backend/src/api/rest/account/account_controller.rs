@@ -1,45 +1,24 @@
-use actix_identity::Identity;
 use actix_web::web::{Data, Json};
 
+use crate::api::services;
+use crate::common::auth::account::IdentityAccount;
 use crate::common::auth::utils::{create_jwt, PrivateClaim};
-use crate::common::errors::ApiError;
 use crate::common::helpers::{respond_json, AppResult};
 use crate::common::validate::validate;
-use crate::database::stores::base_store_trait::BoxedStoreType;
-use crate::dtos::account_dto::{AccountResponse, PostAccountResponse};
-use crate::dtos::auth_dto::*;
-use crate::services;
-
-/// Handler to login a user and create a session for the user
-pub async fn post_session(
-    id: Identity,
-    store: Data<BoxedStoreType>,
-    body: Json<PostSessionRequest>,
-) -> Result<Json<PostAccountResponse>, ApiError> {
-    validate(&body)?;
-
-    let cmd: PostSessionRequest = body.into_inner();
-    let acct = services::account_services::login_account(&store, &cmd).await?;
-    id.remember(acct.id.clone());
-
-    // create jwt token
-    let pc = PrivateClaim::new(acct.id, acct.email, acct.username, acct.mobile);
-    let token = create_jwt(pc)?;
-
-    respond_json(PostAccountResponse {
-        id_token: Some(token),
-    })
-}
+use crate::data::dtos::account_dto::PostAccountResponse;
+use crate::data::dtos::auth_dto::*;
+use crate::data::stores::base_store_trait::BoxedStoreType;
+use actix_guardian_identity::Identity;
 
 /// Handler for creating a new account
 pub async fn post_account(
     store: Data<BoxedStoreType>,
     body: Json<PostAccountRequest>,
-) -> Result<Json<PostAccountResponse>, ApiError> {
+) -> AppResult<Json<PostAccountResponse>> {
     validate(&body)?;
 
     let cmd: PostAccountRequest = body.into_inner();
-    let acct = services::account_services::create_account(&store, &cmd).await?;
+    let acct = services::account_service::create_account(&store, &cmd).await?;
 
     // create jwt token
     let pc = PrivateClaim::new(acct.id, acct.email, acct.username, acct.mobile);
@@ -50,24 +29,50 @@ pub async fn post_account(
     })
 }
 
+/// Handler for deleting accounts
+pub async fn delete_account(
+    store: Data<BoxedStoreType>,
+    id: Identity,
+    current_account: IdentityAccount,
+) -> AppResult<Json<bool>> {
+    let acct = services::account_service::delete_account(&store, &id, current_account).await?;
+    respond_json(acct)
+}
+
+/// Handler for unlocking accounts
+pub async fn unlock_account(
+    store: Data<BoxedStoreType>,
+    current_account: IdentityAccount,
+) -> AppResult<Json<bool>> {
+    let id = current_account.id;
+    let acct = services::account_service::unlock_account(&store, id).await?;
+    respond_json(acct)
+}
+
+/// Handler for locking accounts
+pub async fn lock_account(
+    store: Data<BoxedStoreType>,
+    current_account: IdentityAccount,
+) -> AppResult<Json<bool>> {
+    let id = current_account.id;
+    let acct = services::account_service::lock_account(&store, id).await?;
+    respond_json(acct)
+}
+
 /// This handler checks if an account is available or not.
 pub async fn get_available_account(
-    id: Identity,
     store: Data<BoxedStoreType>,
     body: Json<IdentifierRequest>,
-) -> AppResult<Json<AccountResponse>> {
+) -> AppResult<Json<bool>> {
     validate(&body)?;
 
-    println!("Helllo {}", id.identity().unwrap_or_default());
     let cmd: IdentifierRequest = body.into_inner();
-    let acct = services::account_services::find_account(&store, &cmd).await;
+    let acct = services::account_service::find_account(&store, &cmd).await;
 
-    /* match acct {
+    match acct {
         Ok(_) => respond_json(true),
         Err(_) => respond_json(false),
-    } */
-
-    respond_json(acct?)
+    }
 }
 
 #[cfg(test)]

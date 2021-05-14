@@ -5,7 +5,7 @@ ssl_address: "127.0.0.1:4443"
 datastore:
   db_url: "postgres://rex@localhost:5432/gluesync_db"
   db_name: "guardian"
-  redis_url: "127.0.0.1:6379"
+  redis_url: "redis://127.0.0.1:6379"
 
 security:
   auth_salt: "CHANGEME"
@@ -25,10 +25,13 @@ security:
 
 features:
   api:
-    enabled_graphql: true
+    enable_graphql: true
   auth:
     enable_signup: true
     enable_login: true
+    enable_jwt: true
+    enable_session: true
+    enable_annonymous_auth: true
     login_require_confirmation: true
     login_with_signup: true
     security_level: Simple

@@ -4,3 +4,7 @@
 /frontend/target
 
 /frontend/dist/*
+
+._.DS_Store
+*._.DS_Store
+*._target

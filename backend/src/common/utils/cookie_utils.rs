@@ -1,9 +1,9 @@
 use crate::config::CONFIG;
-use actix_identity::CookieIdentityPolicy;
+use actix_guardian_identity::CookieIdentityPolicy;
 use time::Duration;
 
 pub fn get_cookie_policy() -> CookieIdentityPolicy {
-    CookieIdentityPolicy::new(&[0; 32]) // <- create cookie identity policy
+    CookieIdentityPolicy::new(&[0; 32]) // <- create cookie auth policy
         .name(&CONFIG.security.session_name)
         .secure(CONFIG.security.session_secure)
         .max_age(Duration::seconds(CONFIG.security.session_timeout))

@@ -1,15 +1,24 @@
-pub fn verification_code_gen(length: u8) -> String {
-    let possible = vec!["0", "1", "2", "3", "4", "5", "6", "7", "8", "9"];
-    let mut code: String = "".to_string();
+use crate::config::CONFIG;
+use slauth::oath::totp::TOTPBuilder;
 
-    for _ in 0..length {
-        let raw_position: f32 = rand::random::<f32>() * possible.len() as f32;
-        let pos: usize = raw_position.floor() as usize;
-        let c = possible[pos];
-        code = format!("{}{}", code.clone(), c);
-    }
+pub fn gen_totp_code(secret: String) -> String {
+    let top_builder = TOTPBuilder::new();
+    let ctx = top_builder
+        .secret(secret.as_bytes())
+        .period(CONFIG.security.onetime_code_duration as u64)
+        .digits(CONFIG.security.onetime_code_length as usize)
+        .build();
+    ctx.gen()
+}
 
-    code
+pub fn verify_totp_code(code: &str, secret: String) -> bool {
+    let top_builder = TOTPBuilder::new();
+    let mut ctx = top_builder
+        .secret(secret.as_bytes())
+        .period(CONFIG.security.onetime_code_duration as u64)
+        .digits(CONFIG.security.onetime_code_length as usize)
+        .build();
+    ctx.verify(code)
 }
 
 #[cfg(test)]
@@ -18,7 +27,20 @@ mod tests {
 
     #[test]
     fn it_generates_code() {
-        let code = verification_code_gen(6);
+        let code = gen_totp_code("secret".to_string());
         assert_eq!(code.len(), 6)
+    }
+
+    #[test]
+    fn it_verifies_code_successfully() {
+        let code = gen_totp_code("secret".to_string());
+        let state = verify_totp_code(code.as_str(), "secret".to_string());
+        assert_eq!(state, true)
+    }
+
+    #[test]
+    fn it_fails_to_verify_code() {
+        let state = verify_totp_code("123456", "secret".to_string());
+        assert_eq!(state, false)
     }
 }

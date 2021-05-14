@@ -1,0 +1,46 @@
+syntax = "proto3";
+
+package service_proto;
+
+message MobileInput {
+    string prefix = 1;
+    string digit = 2;
+}
+
+message SessionCreateRequest {
+    string identity = 1;
+    string password = 2;
+}
+
+message AccountCreateRequest {
+    string email = 1;
+    string password = 2;
+    string confirm_password = 3;
+    MobileInput mobile = 4;
+    string username = 5;
+}
+
+message IdentifierRequest {
+    string identity = 1;
+}
+
+message AccountResponse {
+    string id = 1;
+    string username = 2;
+    string mobile = 3;
+    string email = 4;
+    string created_at = 5;
+    string updated_at = 6;
+}
+
+message SessionResponse {
+    string id_token = 1;
+}
+
+message AccountCreateResponse {
+    string id_token = 1;
+}
+
+message AccountsResponse {
+    repeated AccountResponse accounts = 1;
+}

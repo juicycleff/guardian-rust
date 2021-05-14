@@ -3,5 +3,6 @@
 members = [
     "frontend",
     "backend",
-    "juniper_actix"
+    "juniper_actix",
+    "actix-guardian-identity"
 ]

@@ -1,6 +1,6 @@
+use crate::common::auth::account::IdentityAccount;
 use crate::common::auth::utils::{decode_jwt, PrivateClaim};
-use crate::database::models::account::AuthUser;
-use actix_identity::RequestIdentity;
+use actix_guardian_identity::RequestIdentity;
 use actix_web::{
     dev::Payload,
     web::{HttpRequest, HttpResponse},
@@ -8,19 +8,21 @@ use actix_web::{
 };
 use futures::future::{err, ok, Ready};
 
-/// Extractor for pulling the identity out of a request.
+/// Extractor for pulling the auth out of a request.
 ///
-/// Simply add "user: AuthUser" to a handler to invoke this.
-impl FromRequest for AuthUser {
+/// Simply add "user: IdentityAccount" to a handler to invoke this.
+impl FromRequest for IdentityAccount {
+    type Config = ();
     type Error = Error;
     type Future = Ready<Result<Self, Self::Error>>;
-    type Config = ();
 
     fn from_request(req: &HttpRequest, _payload: &mut Payload) -> Self::Future {
+        // req.headers().get()
         let identity = RequestIdentity::get_identity(req);
+
         if let Some(identity) = identity {
             let private_claim: PrivateClaim = decode_jwt(&identity).unwrap();
-            return ok(AuthUser {
+            return ok(IdentityAccount {
                 id: private_claim.sub.to_string(),
                 email: private_claim.email,
                 mobile: private_claim.mobile,

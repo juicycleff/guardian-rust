@@ -1,0 +1,9 @@
+{
+  "schema": "AuthSchema",
+  "fields": [
+    {
+      "name": "username",
+      "requireConfirmation": false
+    }
+  ]
+}

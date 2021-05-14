@@ -1,6 +1,5 @@
 use std::time::Duration;
 
-use actix_identity::Identity;
 use actix_web::web::Data;
 use actix_web::{web, Error, HttpRequest, HttpResponse};
 use juniper_graphql_ws::ConnectionConfig;
@@ -10,16 +9,16 @@ use juniper_actix::{graphiql_handler, graphql_handler, playground_handler};
 
 use crate::api::graphql::schema::context::Context;
 use crate::api::graphql::schema::root::Schema;
-use crate::database::stores::base_store_trait::BoxedStoreType;
+use crate::common::auth::account::IdentityAccount;
+use crate::data::stores::base_store_trait::BoxedStoreType;
 
 pub async fn graphql(
     req: actix_web::HttpRequest,
     payload: actix_web::web::Payload,
     schema: web::Data<Schema>,
     store: Data<BoxedStoreType>,
-    identity: Identity,
 ) -> Result<HttpResponse, Error> {
-    let context = Context::new(store, identity);
+    let context = Context::new(store);
     graphql_handler(&schema, &context, req, payload).await
 }
 
@@ -36,9 +35,8 @@ pub async fn subscriptions(
     stream: web::Payload,
     store: Data<BoxedStoreType>,
     schema: web::Data<Schema>,
-    identity: Identity,
 ) -> Result<HttpResponse, actix_web::Error> {
-    let context = Context::new(store, identity);
+    let context = Context::new(store);
     let schema = schema.into_inner();
     let config = ConnectionConfig::new(context);
     // set the keep alive interval to 15 secs so that it doesn't timeout in playground

@@ -4,6 +4,7 @@ use actix_web::{
     http::StatusCode,
     HttpResponse,
 };
+use celery::error::CeleryError;
 use derive_more::Display;
 use futures::task::SpawnError;
 use mongodb::error::Error as MongoError;
@@ -178,6 +179,13 @@ impl From<mongodb::bson::ser::Error> for ApiError {
 /// Convert Pool Error to ApiErrors
 impl From<SpawnError> for ApiError {
     fn from(error: SpawnError) -> ApiError {
+        ApiError::InternalServerError(error.to_string())
+    }
+}
+
+/// Convert CeleryError Error to ApiErrors
+impl From<CeleryError> for ApiError {
+    fn from(error: CeleryError) -> ApiError {
         ApiError::InternalServerError(error.to_string())
     }
 }
